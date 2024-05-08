@@ -1,0 +1,128 @@
+default:
+  tags:
+  - sfdc-pipeline-runner
+image:
+  name: images.paas.redhat.com/sfdc/sfdc-base:latest
+  entrypoint: [""]
+
+variables:
+  SOLENOPSIS_DIR: "$CI_PROJECT_DIR/.solenopsis"
+  LOG_FILE: "$TEMP_DIR/deploy.log"
+  QA_LOG: "$TEMP_DIR/qa.log"
+  ANT_FILE: "$CI_PROJECT_DIR/ant/ant-salesforce.jar"
+  SRC_DIR: "$CI_PROJECT_DIR/src"
+  XSL_DIR: "$CI_PROJECT_DIR/xslt/solenopsis"
+  IGNORE_FILE: "$CI_PROJECT_DIR/.sfdcignore"
+  SCRIPTS_DIR: "$CI_PROJECT_DIR/scripts"
+  APEX_DIR: "$CI_PROJECT_DIR/src/classes"
+  PROP_FILE: "$SOLENOPSIS_DIR/credentials/dev.properties"
+  TEMP_DIR: "$SOLENOPSIS_DIR/tmp"
+  FAILURE_MESSAGE_FILE: "$TEMP_DIR/failure.txt"
+  NPM_CACHE: "$SOLENOPSIS_DIR/tmp/cache/npm"
+  PMD_CACHE: "$SOLENOPSIS_DIR/tmp/cache/pmd"
+  PMD_CACHE_FILE: "$PMD_CACHE/pmd.cache"
+  GITLAB_DIR: "$CI_PROJECT_DIR/.gitlab"
+  GITLAB_SCRIPTS_DIR: "$GITLAB_DIR/scripts"
+  GITLAB_TEMPLATES_DIR: "$GITLAB_DIR/templates"
+
+stages:
+  - quality
+  - deploy
+  - tests
+  - prod_deploy
+
+.setupDirectories: &setupDirectories
+  - mkdir -p ${TEMP_DIR}
+  - mkdir -p ${PMD_CACHE}
+  - mkdir -p ${NPM_CACHE}
+  - mkdir -p ${SOLENOPSIS_DIR}/credentials
+
+.configure: &configure
+  - DEPLOYMENT_ID=$(date "+%s")
+  - sed -i "s/@{uniqueDeploymentIdentifier}/${DEPLOYMENT_ID}/g" ${APEX_DIR}/*.cls
+
+.notifySlackBefore: &notifySlackBefore
+  - sh ".gitlab/scripts/slack/notifySlackBefore.sh"
+
+.notifySlackAfter: &notifySlackAfter
+  - sh ".gitlab/scripts/slack/notifySlackAfter.sh"
+
+.setupSolenopsis: &setupSolenopsis
+  - *setupDirectories
+  - *configure
+  - sh ".gitlab/scripts/setupSolenopsis.sh"
+
+.qualityAnalysis: &qualityAnalysis
+  allow_failure: false
+  before_script:
+    - *setupDirectories
+    - *notifySlackBefore
+  script:
+    - sh ".gitlab/scripts/qa.sh"
+  after_script:
+    - *notifySlackAfter
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - .env
+
+.deploySandbox: &deploySandbox
+  allow_failure: false
+  before_script:
+    - *setupDirectories
+    - export THREAD_MESSAGE="Starting $CI_ENVIRONMENT_NAME deployment"
+    - *notifySlackBefore
+  script:
+    - *setupSolenopsis
+    - sh ".gitlab/scripts/deploy.sh"
+  after_script:
+    - *notifySlackAfter
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - .env
+
+.deploySandboxDry: &deploySandboxDry
+  allow_failure: false
+  script:
+    - *setupSolenopsis
+    - sh ".gitlab/scripts/dryrun.sh"
+
+.test: &test
+  allow_failure: false
+  before_script:
+    - *setupDirectories
+    - export THREAD_MESSAGE="Running tests for $CI_ENVIRONMENT_NAME"
+    - *notifySlackBefore
+  script:
+    - *setupSolenopsis
+    - sh ".gitlab/scripts/runtests.sh"
+  after_script:
+    - *notifySlackAfter
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - .env
+
+.deployProd: &deployProd
+  allow_failure: false
+  before_script:
+    - *setupDirectories
+    - export THREAD_MESSAGE="Pushing to prod from $CI_JOB_NAME"
+    - *notifySlackBefore
+  script:
+    - *setupSolenopsis
+    - sh ".gitlab/scripts/deploy_fast.sh"
+  after_script:
+    - *notifySlackAfter
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - .env
+
+include:
+  - '.gitlab/templates/mr.yml'
+  - '.gitlab/templates/dev.yml'
+  - '.gitlab/templates/qa.yml'
+  - '.gitlab/templates/stage.yml'
+  - '.gitlab/templates/prod.yml'

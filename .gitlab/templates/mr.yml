@@ -1,0 +1,18 @@
+mr_quality:
+  stage: quality
+  extends: .qualityAnalysis
+  variables:
+    SLACK_SKIP: "true"
+  only:
+    - merge_requests
+
+mr_deploy:
+  stage: deploy
+  extends: .deploySandboxDry
+  environment: dev
+  variables:
+    SLACK_SKIP: "true"
+  only:
+    - merge_requests
+  dependencies:
+    - mr_quality

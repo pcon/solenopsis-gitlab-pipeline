@@ -1,0 +1,40 @@
+dev_quality:
+  stage: quality
+  environment: dev
+  extends: .qualityAnalysis
+  variables:
+    FIRST_JOB: 'true'
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      when: always
+
+dev_deploy:
+  stage: deploy
+  extends: .deploySandbox
+  environment: dev
+  resource_group: dev
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      when: on_success
+  needs:
+    - dev_quality
+
+dev_tests:
+  stage: tests
+  extends: .test
+  resource_group: dev
+  environment: dev
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: never
+  variables:
+    FIRST_JOB: 'true'

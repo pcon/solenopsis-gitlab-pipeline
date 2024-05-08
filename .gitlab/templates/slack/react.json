@@ -1,0 +1,5 @@
+{
+    "channel": "SLACK_CHANNEL",
+    "timestamp": "SLACK_TIMESTAMP",
+    "name": "EMOJI_NAME"
+}

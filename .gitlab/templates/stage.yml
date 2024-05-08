@@ -1,0 +1,30 @@
+stage_deploy:
+  stage: deploy
+  extends: .deploySandbox
+  environment: stage
+  resource_group: stage
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  variables:
+    FIRST_JOB: 'true'
+
+stage_tests:
+  stage: tests
+  extends: .test
+  environment: stage
+  resource_group: stage
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  needs:
+    - stage_deploy
+
+stage_prod_deploy:
+  stage: prod_deploy
+  extends: .deployProd
+  environment: prod
+  resource_group: prod
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  needs:
+    - stage_tests

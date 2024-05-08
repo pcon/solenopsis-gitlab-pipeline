@@ -1,0 +1,62 @@
+{
+    "channel": "CHANNEL_ID",
+    "attachments": [{
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "JOB_MESSAGE",
+                    "emoji": true
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "CI_COMMIT_MESSAGE"
+                    }
+                ]
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "View Job",
+                            "emoji": true
+                        },
+                        "value": "view_job",
+                        "action_id": "view_job",
+                        "url": "CI_JOB_URL"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "View Issue",
+                            "emoji": true
+                        },
+                        "value": "view_issue",
+                        "action_id": "view_issue",
+                        "url": "ISSUE_URL"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "View Tag",
+                            "emoji": true
+                        },
+                        "value": "view_tag",
+                        "action_id": "view_tag",
+                        "url": "TAG_URL"
+                    }
+                ]
+            }
+        ]
+    }]
+}
